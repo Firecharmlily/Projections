@@ -35,7 +35,7 @@ func main() {
     for x := 0; x < width; x++ {
         for y := 0; y < height; y++ {
 
-            if(os.Args[3] == nil){
+            //if(os.Args[3] == nil){ //see if lambert is present
                 topx := float64((x - h) * (x - h))
                 bottomx := float64(a*a)
                 topy := float64((y - k) * (y - k))
@@ -49,7 +49,7 @@ func main() {
                     //sourcePixelX, spy := someFunction(x,y,width,height,proj)
                     //ellipse.Set(x, y, imgSrc.At(sourcePixelX, spy))
                 }
-            }
+           // }
             /*
             lambert code along with parameters
             */
