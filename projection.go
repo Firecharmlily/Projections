@@ -26,8 +26,13 @@ import (
 func main() {
     filename := os.Args[1] //learned from website blog on how to take inputs from command line
     isLambert := len(os.Args) >= 4 && os.Args[3] == "Lambert"
+    
     var standLat float64
     var aspectRatio float64
+    //var lambda float64
+    //var phi float64
+    
+
     if (isLambert) { //In this case, need to determine standard latitude
         standLat = 0.0 //set standard latitude as default 0.0
         if(len(os.Args) == 5){ //see if there is another degree point
@@ -46,7 +51,6 @@ func main() {
         }
 
         aspectRatio = math.Pi * math.Pow(math.Cos(standLat), 2)
-
     }
 
 
@@ -78,15 +82,17 @@ func main() {
     image := image.NewNRGBA(image.Rectangle{image.Point{0, 0}, image.Point{width, height}})
 
     if(isLambert) { //see if Lambert is present and correctly spelled
-
         for x := 0; x < width; x++ {
+            spx := (float64(x) + .5) * float64(sourceWidth)/float64(width) + .5
+            sourcePixelX := int(spx)
             for y := 0; y < height; y++ {
-                var spy float64
-                //x is longitude - prime meridian aka x - 0
-                spy = float64(y) * (math.Sin(standLat)) //y = sin(latitude) aka helps us scale it
-                sourcePixelY := int(spy) //turned to int for Set to work
+                //k = (float64(height) * math.Cos(standLat)) / 2
+                latitude := math.Asin(((2/float64(height))*(float64(y) + .5)) - 1)
+                spy := (((latitude/math.Pi + .5)*float64(sourceHeight)) + .5)
 
-                image.Set(x, sourcePixelY, imgSrc.At(x, y))
+                //x is longitude - prime meridian aka x - 0
+                sourcePixelY := int(spy) //turned to int for Set to work
+                image.Set(x, y, imgSrc.At(sourcePixelX, sourcePixelY))
             }
         }
     } else if ((len(os.Args) != 3) && os.Args[3] != "Lambert"){ //if wording is not exact
