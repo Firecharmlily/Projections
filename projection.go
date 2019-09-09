@@ -93,14 +93,21 @@ func main() {
                 topy := float64((y - k) * (y - k)) //to calculate y width of ellipse
                 bottomy := float64(b*b) //to calculate y width of ellipse
 
-                if((float64(topx/bottomx) + float64(topy/bottomy)) > 1){
+                scalarx := float64(topx/bottomx)
+                scalary := float64(topy/bottomy)
+
+                //sourcePixelX := float64(x) * scalarx
+                //sourcePixelY := float64(y) * scalary
+
+                if((scalarx + scalary) > 1){
                     White := color.Gray{uint8(255)}
                     image.Set(x, y, White)
+                    //image.Set(int(sourcePixelX), int(sourcePixelY), imgSrc.At(x, y))
                 }
-                if((float64(topx/bottomx) + float64(topy/bottomy)) <= 1){
+                if((scalarx + scalary) <= 1){
                     //sourcePixelX, spy := someFunction(x,y,width,height,proj)
                     //ellipse.Set(x, y, imgSrc.At(sourcePixelX, spy))
-                    image.Set(x, y, imgSrc.At(x, y))
+                    image.Set(x, y, imgSrc.At(x,y))
                 }
             }
         }
