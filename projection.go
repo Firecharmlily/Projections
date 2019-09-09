@@ -1,7 +1,7 @@
 /*
 {-
     - Author: Liana Villafuerte, lvillafuerte2018@my.fit.edu
-    - Author: Matthew Craven, e-mail address
+    - Author: Matthew Craven, mcraven2015@my.fit.edu
     - Course: CSE 4250, Fall 2019
     - Project: Proj1, Projection Please
     - Language implementation: go version go1.10.4 linux/amd64
@@ -25,6 +25,31 @@ import (
 
 func main() {
     filename := os.Args[1] //learned from website blog on how to take inputs from command line
+    isLambert := len(os.Args) >= 4 && os.Args[3] == "Lambert"
+    var standLat float64
+    var aspectRatio float64
+    if (isLambert) { //In this case, need to determine standard latitude
+        standLat = 0.0 //set standard latitude as default 0.0
+        if(len(os.Args) == 5){ //see if there is another degree point
+
+            stand, err := strconv.ParseFloat(os.Args[4], 64) //turns string to float
+
+            if (err != nil) { //makes sure float is less then 50.0
+
+                panic(err.Error()) //print error if wrong
+            } else if (stand > 50.0 || stand < 0.0) {
+
+                fmt.Printf("Error in Standard Latitude.  Out of Bounds")
+                os.Exit(2) //exits program since error
+            }
+            standLat = stand * math.Pi / 180 //radians are better
+        }
+
+        aspectRatio = math.Pi * math.Pow(math.Cos(standLat), 2)
+
+    }
+
+
     infile, err := os.Open(filename) //learned code from site on how to turn colored images in grayscaled
 
     if err != nil {
@@ -38,37 +63,27 @@ func main() {
         panic(err.Error())
     }
 
-    // Create a mollweide projection
     bounds := imgSrc.Bounds()
-    width, height := bounds.Max.X, bounds.Max.Y //finds image width and height
+    sourceWidth, sourceHeight := bounds.Max.X, bounds.Max.Y //finds image width and height
+    var width int
+    height := int(sourceHeight)
+
+    if (isLambert) {
+        width = int(float64(height) * aspectRatio + 0.5)
+    } else {
+        width = sourceWidth
+    }
+
 
     image := image.NewNRGBA(image.Rectangle{image.Point{0, 0}, image.Point{width, height}})
 
-    if( (len(os.Args) >= 4) && (os.Args[3] == "Lambert")) { //see if Lambert is present and correctly spelled
-
-        var standLat float64
-        standLat = 0.0 //set standard latitude as default 0.0
-        if(len(os.Args) == 5){ //see if there is another degree point
-
-            stand, err := strconv.ParseFloat(os.Args[4], 64) //turns string to float
-
-            if (err != nil) { //makes sure float is less then 50.0
-
-                panic(err.Error()) //print error if wrong
-            } else if (standLat > 50.0 && standLat < 0.0) {
-
-                fmt.Printf("Error in Standard Latitude.  Out of Bounds")
-                os.Exit(2) //exits program since error
-            }
-            standLat = stand
-        }
-
+    if(isLambert) { //see if Lambert is present and correctly spelled
 
         for x := 0; x < width; x++ {
             for y := 0; y < height; y++ {
                 var spy float64
                 //x is longitude - prime meridian aka x - 0
-                spy = float64(y) * -(math.Sin(standLat)) //y = sin(latitude) aka helps us scale it
+                spy = float64(y) * (math.Sin(standLat)) //y = sin(latitude) aka helps us scale it
                 sourcePixelY := int(spy) //turned to int for Set to work
 
                 image.Set(x, sourcePixelY, imgSrc.At(x, y))
