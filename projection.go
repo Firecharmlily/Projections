@@ -10,7 +10,7 @@
 */
 
 package main
- 
+
 import (
     "image"
     "image/color"
@@ -26,24 +26,24 @@ import (
 func main() {
     filename := os.Args[1] //learned from website blog on how to take inputs from command line
     infile, err := os.Open(filename) //learned code from site on how to turn colored images in grayscaled
-     
-    if err != nil { 
+
+    if err != nil {
         log.Printf("failed opening %s: %s", filename, err)
         panic(err.Error())
     }
     defer infile.Close()
- 
+
     imgSrc, _, err := image.Decode(infile)
     if err != nil {
         panic(err.Error())
     }
- 
+
     // Create a mollweide projection
     bounds := imgSrc.Bounds()
     width, height := bounds.Max.X, bounds.Max.Y //finds image width and height
-    
+
     image := image.NewNRGBA(image.Rectangle{image.Point{0, 0}, image.Point{width, height}})
-    
+
     if( (len(os.Args) >= 4) && (os.Args[3] == "Lambert")) { //see if Lambert is present and correctly spelled
 
         var standLat float64
@@ -51,19 +51,19 @@ func main() {
         if(len(os.Args) == 5){ //see if there is another degree point
 
             stand, err := strconv.ParseFloat(os.Args[4], 64) //turns string to float
-            
+
             if (err != nil) { //makes sure float is less then 50.0
 
                 panic(err.Error()) //print error if wrong
             } else if (standLat > 50.0 && standLat < 0.0) {
-                
+
                 fmt.Printf("Error in Standard Latitude.  Out of Bounds")
                 os.Exit(2) //exits program since error
             }
             standLat = stand
         }
-        
-        
+
+
         for x := 0; x < width; x++ {
             for y := 0; y < height; y++ {
                 var spy float64
@@ -73,7 +73,7 @@ func main() {
 
                 image.Set(x, sourcePixelY, imgSrc.At(x, y))
             }
-        }       
+        }
     } else if ((len(os.Args) != 3) && os.Args[3] != "Lambert"){ //if wording is not exact
 
         fmt.Printf("Error in projection type")
@@ -83,7 +83,7 @@ func main() {
 
         h, k := (width/2), (height/2) //calculate center
         a, b := (width - h), (height - k) //calculate radius
-                
+
         for x := 0; x < width; x++ {
             for y := 0; y < height; y++ {
 
@@ -111,10 +111,10 @@ func main() {
                 }
             }
         }
-                
+
     }
-        
-	
+
+
 	// Encode the elipse image to the new file
     newFileName := os.Args[2]
     newfile, err := os.Create(newFileName)
