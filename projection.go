@@ -1,5 +1,5 @@
 package main
- 
+
 import (
     "image"
     "image/color"
@@ -12,30 +12,31 @@ import (
 func main() {
     filename := os.Args[1] //learned from website blog on how to take inputs from command line
     infile, err := os.Open(filename) //learned code from site on how to turn colored images in grayscaled
-     
-    if err != nil { 
+
+    if err != nil {
         log.Printf("failed opening %s: %s", filename, err)
         panic(err.Error())
     }
     defer infile.Close()
- 
+
     imgSrc, _, err := image.Decode(infile)
     if err != nil {
         panic(err.Error())
     }
- 
+
     // Create a mollweide projection
     bounds := imgSrc.Bounds()
     width, height := bounds.Max.X, bounds.Max.Y
     h, k := (width/2), (height/2)
     a, b := (width - h), (height - k)
-    
+
     ellipse := image.NewNRGBA(image.Rectangle{image.Point{0, 0}, image.Point{width, height}})
-    
+
     for x := 0; x < width; x++ {
         for y := 0; y < height; y++ {
 
-            if(os.Args[3] == nil){
+            //if(os.Args[3] == nil){
+            if (true) { //temporary
                 topx := float64((x - h) * (x - h))
                 bottomx := float64(a*a)
                 topy := float64((y - k) * (y - k))
@@ -55,7 +56,7 @@ func main() {
             */
         }
 	}
-	
+
 	// Encode the grayscale image to the new file
     newFileName := os.Args[2]
     newfile, err := os.Create(newFileName)
