@@ -26,12 +26,18 @@ import (
 func main() {
     filename := os.Args[1] //learned from website blog on how to take inputs from command line
     isLambert := len(os.Args) >= 4 && os.Args[3] == "Lambert"
-    
+
+    if (len(os.Args) < 3) {
+        fmt.Printf("Usage: program_name input_file output_file [projection_type] [std_latitude, if Lambert projection]")
+        os.Exit(1)
+    }
+    if (len(os.Args) > 3 && os.Args[3] != "Lambert") { //if wording is not exact
+        fmt.Printf("Unknown projection type")
+        os.Exit(2) //exits program since error
+    }
+
     var standLat float64
     var aspectRatio float64
-    //var lambda float64
-    //var phi float64
-    
 
     if (isLambert) { //In this case, need to determine standard latitude
         standLat = 0.0 //set standard latitude as default 0.0
@@ -40,16 +46,13 @@ func main() {
             stand, err := strconv.ParseFloat(os.Args[4], 64) //turns string to float
 
             if (err != nil) { //makes sure float is less then 50.0
-
                 panic(err.Error()) //print error if wrong
             } else if (stand > 50.0 || stand < 0.0) {
-
                 fmt.Printf("Error in Standard Latitude.  Out of Bounds")
                 os.Exit(2) //exits program since error
             }
             standLat = stand * math.Pi / 180 //radians are better
         }
-
         aspectRatio = math.Pi * math.Pow(math.Cos(standLat), 2)
     }
 
@@ -78,28 +81,21 @@ func main() {
         width = sourceWidth
     }
 
-
     image := image.NewNRGBA(image.Rectangle{image.Point{0, 0}, image.Point{width, height}})
 
-    if(isLambert) { //see if Lambert is present and correctly spelled
-        for x := 0; x < width; x++ {
-            spx := (float64(x) + .5) * float64(sourceWidth)/float64(width) + .5
-            sourcePixelX := int(spx)
-            for y := 0; y < height; y++ {
+    if(isLambert) {
+        for y := 0; y < height; y++ {
+            // + 0.5 is used to round or to take the center of a pixel
+            latitude := math.Asin(((2/float64(height))*(float64(y) + 0.5)) - 1)
+            spy := (((latitude/math.Pi + 0.5)*float64(sourceHeight)) + 0.5)
+            sourcePixelY := int(spy) //turned to int for Set to work
+            for x := 0; x < width; x++ {
+                spx := (float64(x) + 0.5) * float64(sourceWidth)/float64(width) + 0.5
+                sourcePixelX := int(spx)
                 //k = (float64(height) * math.Cos(standLat)) / 2
-                latitude := math.Asin(((2/float64(height))*(float64(y) + .5)) - 1)
-                spy := (((latitude/math.Pi + .5)*float64(sourceHeight)) + .5)
-
-                //x is longitude - prime meridian aka x - 0
-                sourcePixelY := int(spy) //turned to int for Set to work
                 image.Set(x, y, imgSrc.At(sourcePixelX, sourcePixelY))
             }
         }
-    } else if ((len(os.Args) != 3) && os.Args[3] != "Lambert"){ //if wording is not exact
-
-        fmt.Printf("Error in projection type")
-        os.Exit(2) //exits program since error
-
     } else { //defaults to Mollweide Projection
 
         h, k := (width/2), (height/2) //calculate center
