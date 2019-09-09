@@ -1,3 +1,14 @@
+/*
+{-
+    - Author: Liana Villafuerte, lvillafuerte2018@my.fit.edu
+    - Author: Matthew Craven, e-mail address
+    - Course: CSE 4250, Fall 2019
+    - Project: Proj1, Projection Please
+    - Language implementation: go version go1.10.4 linux/amd64
+    -
+}
+*/
+
 package main
  
 import (
@@ -29,45 +40,58 @@ func main() {
  
     // Create a mollweide projection
     bounds := imgSrc.Bounds()
-    width, height := bounds.Max.X, bounds.Max.Y
+    width, height := bounds.Max.X, bounds.Max.Y //finds image width and height
     
     image := image.NewNRGBA(image.Rectangle{image.Point{0, 0}, image.Point{width, height}})
     
-    for x := 0; x < width; x++ {
-        for y := 0; y < height; y++ {
+    if( (len(os.Args) >= 4) && (os.Args[3] == "Lambert")) { //see if Lambert is present and correctly spelled
 
-            if( (len(os.Args) >= 4) && (os.Args[3] == "Lambert")) { //see if Lambert is present and correctly spelled
+        var standLat float64
+        standLat = 0.0 //set standard latitude as default 0.0
+        if(len(os.Args) == 5){ //see if there is another degree point
 
-                var standLat float64
-                standLat = 0.0 //set standard latitude as default 0.0
+            stand, err := strconv.ParseFloat(os.Args[4], 64) //turns string to float
+            
+            if (err != nil) { //makes sure float is less then 50.0
 
-                if(len(os.Args) == 5){ //see if there is another degree point
-                    standLat, err := strconv.ParseFloat(os.Args[4], 64) //turns string to float
-                    if ((err != nil) || standLat > 50.0) { //makes sure float is less then 50.0
-                        panic(err.Error()) //print error if wrong
-                    }
-                }
-
-                var spy float64
-
-                //x is longitude - prime meridian aka x - 0
-                spy = float64(y) - math.Sin(standLat) //y = sin(latitude) 
-                sourcePixelY := int(spy) //turned to int for Set to work
-                image.Set(x, sourcePixelY, imgSrc.At(x, y))
-
-            } else if ((len(os.Args) != 3) && os.Args[3] != "Lambert"){ //if wording is not exact
-
-                fmt.Printf("Error in projection type")
+                panic(err.Error()) //print error if wrong
+            } else if (standLat > 50.0 && standLat < 0.0) {
+                
+                fmt.Printf("Error in Standard Latitude.  Out of Bounds")
                 os.Exit(2) //exits program since error
+            }
+            standLat = stand
+        }
+        
+        
+        for x := 0; x < width; x++ {
+            for y := 0; y < height; y++ {
+                var spy float64
+                //x is longitude - prime meridian aka x - 0
+                spy = float64(y) * -(math.Sin(standLat)) //y = sin(latitude) aka helps us scale it
+                sourcePixelY := int(spy) //turned to int for Set to work
 
-            } else { //defaults to Mollweide Projection
+                image.Set(x, sourcePixelY, imgSrc.At(x, y))
+            }
+        }       
+    } else if ((len(os.Args) != 3) && os.Args[3] != "Lambert"){ //if wording is not exact
 
-                h, k := (width/2), (height/2)
-                a, b := (width - h), (height - k)
-                topx := float64((x - h) * (x - h))
-                bottomx := float64(a*a)
-                topy := float64((y - k) * (y - k))
-                bottomy := float64(b*b)
+        fmt.Printf("Error in projection type")
+        os.Exit(2) //exits program since error
+
+    } else { //defaults to Mollweide Projection
+
+        h, k := (width/2), (height/2) //calculate center
+        a, b := (width - h), (height - k) //calculate radius
+                
+        for x := 0; x < width; x++ {
+            for y := 0; y < height; y++ {
+
+                topx := float64((x - h) * (x - h)) //to calculate x height of ellipse
+                bottomx := float64(a*a) //to calculate x height of ellipse
+
+                topy := float64((y - k) * (y - k)) //to calculate y width of ellipse
+                bottomy := float64(b*b) //to calculate y width of ellipse
 
                 if((float64(topx/bottomx) + float64(topy/bottomy)) > 1){
                     White := color.Gray{uint8(255)}
@@ -80,7 +104,9 @@ func main() {
                 }
             }
         }
-	}
+                
+    }
+        
 	
 	// Encode the elipse image to the new file
     newFileName := os.Args[2]
