@@ -87,44 +87,42 @@ func main() {
         for y := 0; y < height; y++ {
             // + 0.5 is used to round or to take the center of a pixel
             latitude := math.Asin(((2/float64(height))*(float64(y) + 0.5)) - 1)
-            spy := (((latitude/math.Pi + 0.5)*float64(sourceHeight)) + 0.5)
-            sourcePixelY := int(spy) //turned to int for Set to work
+            spy := (latitude/math.Pi + 0.5)*float64(sourceHeight)
+            sourcePixelY := int(spy + 0.5) //turned to int for Set to work
             for x := 0; x < width; x++ {
-                spx := (float64(x) + 0.5) * float64(sourceWidth)/float64(width) + 0.5
-                sourcePixelX := int(spx)
+                spx := (float64(x) + 0.5) * float64(sourceWidth)/float64(width)
+                sourcePixelX := int(spx + 0.5)
                 //k = (float64(height) * math.Cos(standLat)) / 2
                 image.Set(x, y, imgSrc.At(sourcePixelX, sourcePixelY))
             }
         }
     } else { //defaults to Mollweide Projection
 
-        h, k := (width/2), (height/2) //calculate center
-        a, b := (width - h), (height - k) //calculate radius
+        half_width, half_height := float64(width)/2, float64(height)/2 //calculate center
 
-        for x := 0; x < width; x++ {
-            for y := 0; y < height; y++ {
+        for y := 0; y < height; y++ {
+            theta := math.Asin((2/float64(height)*(float64(y) + 0.5)) - 1)
+            latitude := math.Asin((2*theta + math.Sin(2*theta))/math.Pi)
+            spy := (latitude/math.Pi + 0.5)*float64(sourceHeight)
+            sourcePixelY := int(spy + 0.5) //turned to int for Set to work
 
-                topx := float64((x - h) * (x - h)) //to calculate x height of ellipse
-                bottomx := float64(a*a) //to calculate x height of ellipse
+            for x := 0; x < width; x++ {
 
-                topy := float64((y - k) * (y - k)) //to calculate y width of ellipse
-                bottomy := float64(b*b) //to calculate y width of ellipse
+                dx := float64(x) + 0.5 - half_width
+                dy := float64(y) + 0.5 - half_height
+                bottomx := float64(half_width*half_width) //to calculate x height of ellipse
+                bottomy := float64(half_height*half_height) //to calculate y width of ellipse
+                scalarx := float64(dx*dx/bottomx)
+                scalary := float64(dy*dy/bottomy)
 
-                scalarx := float64(topx/bottomx)
-                scalary := float64(topy/bottomy)
-
-                //sourcePixelX := float64(x) * scalarx
-                //sourcePixelY := float64(y) * scalary
-
-                if((scalarx + scalary) > 1){
+                if((scalarx + scalary) > 1) {
                     White := color.Gray{uint8(255)}
                     image.Set(x, y, White)
                     //image.Set(int(sourcePixelX), int(sourcePixelY), imgSrc.At(x, y))
-                }
-                if((scalarx + scalary) <= 1){
-                    //sourcePixelX, spy := someFunction(x,y,width,height,proj)
-                    //ellipse.Set(x, y, imgSrc.At(sourcePixelX, spy))
-                    image.Set(x, y, imgSrc.At(x,y))
+                } else {
+                    spx := float64(sourceWidth) * (0.5 + dx / float64(width) / math.Cos(theta))
+                    sourcePixelX := int(spx + 0.5)
+                    image.Set(x, y, imgSrc.At(sourcePixelX, sourcePixelY))
                 }
             }
         }
