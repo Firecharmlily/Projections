@@ -59,6 +59,12 @@ func main() {
             }
             standLat = stand * math.Pi / 180 //radians are better
         }
+        // This was by far the most useful formula on the
+        // wikipedia page "Cylindrical equal-area projection"
+
+        // For most formulas on the pages consulted, it was easier
+        // to reason about the maximum and minimum values of the
+        // various coordinates than to explicitly find the parameters.
         aspectRatio = math.Pi * math.Pow(math.Cos(standLat), 2)
     }
 
@@ -103,7 +109,6 @@ func main() {
             }
         }
     } else { //defaults to Mollweide Projection
-
         half_width, half_height := float64(width)/2, float64(height)/2 //calculate center
         bottomx := half_width*half_width //to calculate x height of ellipse
         bottomy := half_height*half_height //to calculate y width of ellipse
@@ -112,6 +117,9 @@ func main() {
             dy := float64(y) + 0.5 - half_height
             scalary := dy*dy/bottomy
 
+            // This algorithm, using an auxilliary angle theta to
+            // invert the projection map, was adapted from the
+            // Wikipedia article on the "Mollweide projection"
             theta := math.Asin(dy / half_height)
             latitude := math.Asin((2*theta + math.Sin(2*theta))/math.Pi)
             spy := (latitude/math.Pi + 0.5)*float64(sourceHeight)
@@ -138,7 +146,7 @@ func main() {
     }
 
 
-	// Encode the elipse image to the new file
+    // Encode the elipse image to the new file
     newFileName := os.Args[2]
     newfile, err := os.Create(newFileName)
     if err != nil {
