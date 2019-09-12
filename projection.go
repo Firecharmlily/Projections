@@ -4,8 +4,9 @@
     - Author: Matthew Craven, mcraven2015@my.fit.edu
     - Course: CSE 4250, Fall 2019
     - Project: Proj1, Projection Please
-    - Language implementation: go version go1.10.4 linux/amd64
-    -
+    - Language implementations:
+      - go version go1.10.4 linux/amd64
+      - go version go1.7.4 linux/amd64
 }
 */
 
@@ -27,18 +28,23 @@ func main() {
     filename := os.Args[1] //learned from website blog on how to take inputs from command line
     isLambert := len(os.Args) >= 4 && os.Args[3] == "Lambert"
 
-    if (len(os.Args) < 3) {
-        fmt.Printf("Usage: program_name input_file output_file [projection_type] [std_latitude, if Lambert projection]")
+    usageStr := "Usage: program_name input_file output_file [projection_type] [std_latitude, if Lambert projection]"
+
+    if (len(os.Args) < 3 || len(os.Args) > 5) {
+        fmt.Printf(usageStr)
         os.Exit(1)
     }
+
+    /*
+    // It looks like the presence rather than the spelling of the third arg is what counts.
     if (len(os.Args) > 3 && os.Args[3] != "Lambert") { //if wording is not exact
         fmt.Printf("Unknown projection type")
         os.Exit(2) //exits program since error
     }
+    */
 
     var standLat float64
     var aspectRatio float64
-
     if (isLambert) { //In this case, need to determine standard latitude
         standLat = 0.0 //set standard latitude as default 0.0
         if(len(os.Args) == 5){ //see if there is another degree point
@@ -58,7 +64,6 @@ func main() {
 
 
     infile, err := os.Open(filename) //learned code from site on how to turn colored images in grayscaled
-
     if err != nil {
         log.Printf("failed opening %s: %s", filename, err)
         panic(err.Error())
@@ -84,44 +89,47 @@ func main() {
     image := image.NewNRGBA(image.Rectangle{image.Point{0, 0}, image.Point{width, height}})
 
     if(isLambert) {
+        widthRatio := float64(sourceWidth)/float64(width)
         for y := 0; y < height; y++ {
-            // + 0.5 is used to round or to take the center of a pixel
+            // + 0.5 is used to take the center of a pixel
+            // flooring is used without rounding for that reason
             latitude := math.Asin(((2/float64(height))*(float64(y) + 0.5)) - 1)
             spy := (latitude/math.Pi + 0.5)*float64(sourceHeight)
-            sourcePixelY := int(spy + 0.5) //turned to int for Set to work
+            sourcePixelY := int(spy)
             for x := 0; x < width; x++ {
-                spx := (float64(x) + 0.5) * float64(sourceWidth)/float64(width)
-                sourcePixelX := int(spx + 0.5)
-                //k = (float64(height) * math.Cos(standLat)) / 2
+                spx := (float64(x) + 0.5) * widthRatio
+                sourcePixelX := int(spx)
                 image.Set(x, y, imgSrc.At(sourcePixelX, sourcePixelY))
             }
         }
     } else { //defaults to Mollweide Projection
 
         half_width, half_height := float64(width)/2, float64(height)/2 //calculate center
+        bottomx := half_width*half_width //to calculate x height of ellipse
+        bottomy := half_height*half_height //to calculate y width of ellipse
 
         for y := 0; y < height; y++ {
-            theta := math.Asin((2/float64(height)*(float64(y) + 0.5)) - 1)
+            dy := float64(y) + 0.5 - half_height
+            scalary := dy*dy/bottomy
+
+            theta := math.Asin(dy / half_height)
             latitude := math.Asin((2*theta + math.Sin(2*theta))/math.Pi)
             spy := (latitude/math.Pi + 0.5)*float64(sourceHeight)
-            sourcePixelY := int(spy + 0.5) //turned to int for Set to work
+            sourcePixelY := int(spy) //turned to int for Set to work
+
+            xOffset := 0.5 * float64(sourceWidth)
+            xScale := float64(sourceWidth) / (float64(width) * math.Cos(theta))
 
             for x := 0; x < width; x++ {
-
                 dx := float64(x) + 0.5 - half_width
-                dy := float64(y) + 0.5 - half_height
-                bottomx := float64(half_width*half_width) //to calculate x height of ellipse
-                bottomy := float64(half_height*half_height) //to calculate y width of ellipse
-                scalarx := float64(dx*dx/bottomx)
-                scalary := float64(dy*dy/bottomy)
+                scalarx := dx*dx/bottomx
 
-                if((scalarx + scalary) > 1) {
+                if(scalarx + scalary >= 1) {
                     White := color.Gray{uint8(255)}
                     image.Set(x, y, White)
-                    //image.Set(int(sourcePixelX), int(sourcePixelY), imgSrc.At(x, y))
                 } else {
-                    spx := float64(sourceWidth) * (0.5 + dx / float64(width) / math.Cos(theta))
-                    sourcePixelX := int(spx + 0.5)
+                    spx := xOffset + dx * xScale
+                    sourcePixelX := int(spx)
                     image.Set(x, y, imgSrc.At(sourcePixelX, sourcePixelY))
                 }
             }
