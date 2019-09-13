@@ -1,11 +1,12 @@
 /*
 {-
-    - Author: Matthew Craven, mcraven2015@my.fit.edu
     - Author: Liana Villafuerte, lvillafuerte2018@my.fit.edu
+    - Author: Matthew Craven, mcraven2015@my.fit.edu
     - Course: CSE 4250, Fall 2019
     - Project: Proj1, Projection Please
-    - Language implementation: go version go1.10.4 linux/amd64
-    -
+    - Language implementations:
+      - go version go1.10.4 linux/amd64
+      - go version go1.7.4 linux/amd64
 }
 */
 
@@ -25,20 +26,25 @@ import (
 
 func main() {
     filename := os.Args[1] //learned from website blog on how to take inputs from command line
-    isLambert := len(os.Args) >= 4 && os.Args[3] == "Lambert" //checks input to see if Lambert is present and correctly spelled
+    isLambert := len(os.Args) >= 4 && os.Args[3] == "Lambert"
 
-    if (len(os.Args) < 3) { //if input is less then needed to run
-        fmt.Printf("Usage: program_name input_file output_file [projection_type] [std_latitude, if Lambert projection]")
-        os.Exit(1) //exits program since error
+    usageStr := "Usage: program_name input_file output_file [projection_type] [std_latitude, if Lambert projection]"
+
+    if (len(os.Args) < 3 || len(os.Args) > 5) {
+        fmt.Printf(usageStr)
+        os.Exit(1)
     }
+
+    /*
+    // It looks like the presence rather than the spelling of the third arg is what counts.
     if (len(os.Args) > 3 && os.Args[3] != "Lambert") { //if wording is not exact
         fmt.Printf("Unknown projection type")
         os.Exit(2) //exits program since error
     }
+    */
 
-    var standLat float64 //sets variable for standard latitude
-    var aspectRatio float64 //sets variable for aspect ratio needed for Lambert formulae
-
+    var standLat float64
+    var aspectRatio float64
     if (isLambert) { //In this case, need to determine standard latitude
         standLat = 0.0 //set standard latitude as default 0.0
         if(len(os.Args) == 5){ //see if there is another degree point
@@ -53,86 +59,86 @@ func main() {
             }
             standLat = stand * math.Pi / 180 //radians are better
         }
+        // This was by far the most useful formula on the
+        // wikipedia page "Cylindrical equal-area projection"
+
+        // For most formulas on the pages consulted, it was easier
+        // to reason about the maximum and minimum values of the
+        // various coordinates than to explicitly find the parameters.
         aspectRatio = math.Pi * math.Pow(math.Cos(standLat), 2)
     }
 
-    infile, err := os.Open(filename) //learned code from site on how to turn colored images in grayscaled
 
-    if err != nil { //if file is not present or an error occurred
+    infile, err := os.Open(filename) //learned code from site on how to turn colored images in grayscaled
+    if err != nil {
         log.Printf("failed opening %s: %s", filename, err)
         panic(err.Error())
     }
     defer infile.Close()
 
-    imgSrc, _, err := image.Decode(infile) //also learned from color to grayscale site
-    if err != nil { //if decoding file caused an error
+    imgSrc, _, err := image.Decode(infile)
+    if err != nil {
         panic(err.Error())
     }
 
-    bounds := imgSrc.Bounds() //sets a variable that points to the (x, y) pixel bounds
+    bounds := imgSrc.Bounds()
     sourceWidth, sourceHeight := bounds.Max.X, bounds.Max.Y //finds image width and height
-
-    var width int //set variable for when width may need to be changed
-    height := int(sourceHeight) //always set height as source height since that stays consistent
+    var width int
+    height := int(sourceHeight)
 
     if (isLambert) {
-        width = int(float64(height) * aspectRatio + 0.5) //if lambert prepare to change width
+        width = int(float64(height) * aspectRatio + 0.5)
     } else {
-        width = sourceWidth //if mollweide keep source width
+        width = sourceWidth
     }
 
-    image := image.NewNRGBA(image.Rectangle{image.Point{0, 0}, image.Point{width, height}}) //new colored image is set to be coded
+    image := image.NewNRGBA(image.Rectangle{image.Point{0, 0}, image.Point{width, height}})
 
     if(isLambert) {
+        widthRatio := float64(sourceWidth)/float64(width)
         for y := 0; y < height; y++ {
-            // + 0.5 is used to round or to take the center of a pixel
-            latitude := math.Asin(((2/float64(height))*(float64(y) + 0.5)) - 1) //calculates latitude for y
-
-            spy := (latitude/math.Pi + 0.5)*float64(sourceHeight) //calculates y coordinate to pull from
-            sourcePixelY := int(spy + 0.5) //math was found and translated from Lambert wikipedia
-
+            // + 0.5 is used to take the center of a pixel
+            // flooring is used without rounding for that reason
+            latitude := math.Asin(((2/float64(height))*(float64(y) + 0.5)) - 1)
+            spy := (latitude/math.Pi + 0.5)*float64(sourceHeight)
+            sourcePixelY := int(spy)
             for x := 0; x < width; x++ {
-
-                spx := (float64(x) + 0.5) * float64(sourceWidth)/float64(width) //calculates x coordinate to pull from
-                sourcePixelX := int(spx + 0.5) //mth was found and translated from Lambert wikipedia
-
-                image.Set(x, y, imgSrc.At(sourcePixelX, sourcePixelY)) //sets image pixel loaction as the pulled pixel from input
+                spx := (float64(x) + 0.5) * widthRatio
+                sourcePixelX := int(spx)
+                image.Set(x, y, imgSrc.At(sourcePixelX, sourcePixelY))
             }
         }
     } else { //defaults to Mollweide Projection
-
         half_width, half_height := float64(width)/2, float64(height)/2 //calculate center
+        bottomx := half_width*half_width //to calculate x height of ellipse
+        bottomy := half_height*half_height //to calculate y width of ellipse
 
         for y := 0; y < height; y++ {
-             // + 0.5 is used to round or to take the center of a pixel
-            theta := math.Asin((2/float64(height)*(float64(y) + 0.5)) - 1) //calulates theta for formulae
-            latitude := math.Asin((2*theta + math.Sin(2*theta))/math.Pi) //calculates latitude of y for placement
+            dy := float64(y) + 0.5 - half_height
+            scalary := dy*dy/bottomy
 
-            spy := (latitude/math.Pi + 0.5)*float64(sourceHeight) //calculates y pixel to pull from
-            sourcePixelY := int(spy + 0.5) //math was found and translated from mollweide wikipedia
+            // This algorithm, using an auxilliary angle theta to
+            // invert the projection map, was adapted from the
+            // Wikipedia article on the "Mollweide projection"
+            theta := math.Asin(dy / half_height)
+            latitude := math.Asin((2*theta + math.Sin(2*theta))/math.Pi)
+            spy := (latitude/math.Pi + 0.5)*float64(sourceHeight)
+            sourcePixelY := int(spy) //turned to int for Set to work
+
+            xOffset := 0.5 * float64(sourceWidth)
+            xScale := float64(sourceWidth) / (float64(width) * math.Cos(theta))
 
             for x := 0; x < width; x++ {
-
-                 // + 0.5 is used to round or to take the center of a pixel
                 dx := float64(x) + 0.5 - half_width
-                dy := float64(y) + 0.5 - half_height
+                scalarx := dx*dx/bottomx
 
-                bottomx := float64(half_width*half_width) //to calculate x height of ellipse
-                bottomy := float64(half_height*half_height) //to calculate y width of ellipse
-
-                scalarx := float64(dx*dx/bottomx) //helps scale the ellipse radius
-                scalary := float64(dy*dy/bottomy) //helps scale the ellipse radius
-
-                if((scalarx + scalary) > 1) {
-                    //sets out of bounds as white
-                    White := color.Gray{uint8(255)} //found on how to use image/Color library
+                if(scalarx + scalary >= 1) {
+                    White := color.Gray{uint8(255)}
                     image.Set(x, y, White)
                 } else {
-                     // + 0.5 is used to round or to take the center of a pixel
-                    spx := float64(sourceWidth) * (0.5 + dx / float64(width) / math.Cos(theta)) //calculates x pixel to pull from
-                    sourcePixelX := int(spx + 0.5) //math was found and translated from mollweide wikipedia
-
-                    image.Set(x, y, imgSrc.At(sourcePixelX, sourcePixelY)) //sets image pixel loaction as the pulled pixel from input
+                    spx := xOffset + dx * xScale
+                    sourcePixelX := int(spx)
+                    image.Set(x, y, imgSrc.At(sourcePixelX, sourcePixelY))
                 }
             }
         }
@@ -140,10 +146,10 @@ func main() {
     }
 
 
-	// Encode the elipse image to the new file
-    newFileName := os.Args[2] //name of the newfile from input command line
-    newfile, err := os.Create(newFileName) //creates new file
-    if err != nil { //
+    // Encode the elipse image to the new file
+    newFileName := os.Args[2]
+    newfile, err := os.Create(newFileName)
+    if err != nil {
         log.Printf("failed creating %s: %s", newfile, err)
         panic(err.Error())
     }
