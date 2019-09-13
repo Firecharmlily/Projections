@@ -155,6 +155,7 @@ func main() {
 
     // Encode the elipse image to the new file
     //learned also from the color to black/white image blog
+    //link: https://www.golangprograms.com/how-to-convert-colorful-png-image-to-gray-scale.html
     newFileName := os.Args[2]
     newfile, err := os.Create(newFileName)
     if err != nil {
