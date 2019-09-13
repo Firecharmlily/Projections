@@ -7,6 +7,7 @@
     - Language implementations:
       - go version go1.10.4 linux/amd64
       - go version go1.7.4 linux/amd64
+      - go version go1.12.9 windows/amd64
 }
 */
 
