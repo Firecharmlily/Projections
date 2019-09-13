@@ -30,9 +30,9 @@ func main() {
 
     usageStr := "Usage: program_name input_file output_file [projection_type] [std_latitude, if Lambert projection]"
 
-    if (len(os.Args) < 3 || len(os.Args) > 5) {
-        fmt.Printf(usageStr)
-        os.Exit(1)
+    if (len(os.Args) < 3 || len(os.Args) > 5) { //outputs error if improperly called on
+        fmt.Printf(usageStr) //prints message
+        os.Exit(1) //leaves program
     }
 
     /*
@@ -59,37 +59,42 @@ func main() {
             }
             standLat = stand * math.Pi / 180 //radians are better
         }
+
         // This was by far the most useful formula on the
         // wikipedia page "Cylindrical equal-area projection"
 
         // For most formulas on the pages consulted, it was easier
         // to reason about the maximum and minimum values of the
         // various coordinates than to explicitly find the parameters.
+
         aspectRatio = math.Pi * math.Pow(math.Cos(standLat), 2)
     }
 
 
     infile, err := os.Open(filename) //learned code from site on how to turn colored images in grayscaled
-    if err != nil {
+
+    if err != nil { //if there was no file to open it would print the error
         log.Printf("failed opening %s: %s", filename, err)
         panic(err.Error())
     }
     defer infile.Close()
 
-    imgSrc, _, err := image.Decode(infile)
-    if err != nil {
+    imgSrc, _, err := image.Decode(infile) //decodes the image file
+
+    if err != nil { //if it can't decode the file it stops and prints an error
         panic(err.Error())
     }
 
-    bounds := imgSrc.Bounds()
+    bounds := imgSrc.Bounds() //grabs the bounds of the image
     sourceWidth, sourceHeight := bounds.Max.X, bounds.Max.Y //finds image width and height
-    var width int
-    height := int(sourceHeight)
 
-    if (isLambert) {
+    var width int
+    height := int(sourceHeight) //height always remains the same in both programs
+
+    if (isLambert) { //if the statement of it being lambert is true, it changes the width
         width = int(float64(height) * aspectRatio + 0.5)
     } else {
-        width = sourceWidth
+        width = sourceWidth //mollweide has the same width as the input image
     }
 
     image := image.NewNRGBA(image.Rectangle{image.Point{0, 0}, image.Point{width, height}})
@@ -101,8 +106,9 @@ func main() {
             // flooring is used without rounding for that reason
             latitude := math.Asin(((2/float64(height))*(float64(y) + 0.5)) - 1)
             spy := (latitude/math.Pi + 0.5)*float64(sourceHeight)
-            sourcePixelY := int(spy)
-            for x := 0; x < width; x++ {
+            sourcePixelY := int(spy) //rounds to an int to make implementing image.Set easier
+
+            for x := 0; x < width; x++ { //pulls the needed pixel from the source file and places it at (x,y)
                 spx := (float64(x) + 0.5) * widthRatio
                 sourcePixelX := int(spx)
                 image.Set(x, y, imgSrc.At(sourcePixelX, sourcePixelY))
@@ -125,8 +131,9 @@ func main() {
             spy := (latitude/math.Pi + 0.5)*float64(sourceHeight)
             sourcePixelY := int(spy) //turned to int for Set to work
 
+            //helps set and scale the image into the ellipse for mollweide
             xOffset := 0.5 * float64(sourceWidth)
-            xScale := float64(sourceWidth) / (float64(width) * math.Cos(theta))
+            xScale := float64(sourceWidth) / (float64(width) * math.Cos(theta)) 
 
             for x := 0; x < width; x++ {
                 dx := float64(x) + 0.5 - half_width
@@ -136,7 +143,7 @@ func main() {
                     White := color.Gray{uint8(255)}
                     image.Set(x, y, White)
                 } else {
-                    spx := xOffset + dx * xScale
+                    spx := xOffset + dx * xScale //formula to calculate where to grab the pixel from
                     sourcePixelX := int(spx)
                     image.Set(x, y, imgSrc.At(sourcePixelX, sourcePixelY))
                 }
@@ -147,10 +154,11 @@ func main() {
 
 
     // Encode the elipse image to the new file
+    //learned also from the color to black/white image blog
     newFileName := os.Args[2]
     newfile, err := os.Create(newFileName)
     if err != nil {
-        log.Printf("failed creating %s: %s", newfile, err)
+        log.Printf("failed creating %s: %s", newFileName, err)
         panic(err.Error())
     }
     defer newfile.Close()
